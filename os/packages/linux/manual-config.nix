@@ -89,7 +89,7 @@ let
       installsFirmware = (config.isEnabled "FW_LOADER") &&
         (isModular || (config.isDisabled "FIRMWARE_IN_KERNEL")) &&
         (lib.versionOlder version "4.14");
-    in (optionalAttrs isModular { outputs = [ "out" "dev" ]; }) // {
+    in { outputs = [ "out" "buildOutput" ] ++ optionals isModular [ "dev" ]; } // {
       passthru = {
         inherit version modDirVersion config kernelPatches configfile
           moduleBuildDependencies stdenv;
@@ -193,7 +193,16 @@ let
           else "install"))
       ];
 
-      postInstall = (optionalString installsFirmware ''
+      postInstall = ''
+	echo
+	pwd
+	echo
+	ls -la ..
+	echo
+	ls -la .
+        mkdir -p $buildOutput
+	rsync --archive --prune-empty-dirs -l ../.* $buildOutput/
+      '' + (optionalString installsFirmware ''
         mkdir -p $out/lib/firmware
       '') + (if (kernelConf.DTB or false) then ''
         make $makeFlags "''${makeFlagsArray[@]}" dtbs dtbs_install INSTALL_DTBS_PATH=$out/dtbs
